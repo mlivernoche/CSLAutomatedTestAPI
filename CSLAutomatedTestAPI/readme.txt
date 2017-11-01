@@ -1,7 +1,6 @@
 ﻿CSL Automated Test API
 
-This API is used can be used to test the CudaSharperLibrary (CSL) on CUDA-enabled GPUs. This API automates these tests and can be
-used to build a console or GUI application.
+This API is used can be used to test the CudaSharperLibrary (CSL) on CUDA-enabled GPUs. This API automates these tests and can be used to build a console or GUI application.
 
 Objectives:
 1. Use all of the functionality provided by the CSL.
