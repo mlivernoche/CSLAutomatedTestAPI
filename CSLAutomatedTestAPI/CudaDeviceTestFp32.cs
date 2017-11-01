@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using CudaSharper;
+using System;
 
 namespace CslAutomatedTestApi
 {
@@ -9,7 +10,7 @@ namespace CslAutomatedTestApi
     /// </summary>
     public sealed class CudaDeviceTestFp32 : ICudaDeviceTest
     {
-        public CudaDeviceTestFp32(ICudaTestParameters parameters) : base(parameters)
+        public CudaDeviceTestFp32(ICudaTestParameters parameters, IProgress<double> progress) : base(parameters, progress)
         {
             Initialize();
         }

@@ -42,20 +42,25 @@ namespace CslAutomatedTestApi
         private CudaTestResultCollection _results { get; set; }
         public CudaTestResultCollection Results => _results;
 
-        private object locker = new object();
+        private static object locker = new object();
         private bool _isInitialized = false;
 
-        protected virtual Dictionary<CudaTestParallelism, Func<ICudaTestParameters, CudaTestResultCollection>> CudaTestMethod { get; }
+        protected delegate CudaTestResultCollection CudaTestImplementation(ICudaTestParameters parameters);
+        protected virtual Dictionary<CudaTestParallelism, CudaTestImplementation> CudaTestMethod { get; }
 
-        public ICudaDeviceTest(ICudaTestParameters parameters)
+        protected IProgress<double> Progression { get; }
+
+        public ICudaDeviceTest(ICudaTestParameters parameters, IProgress<double> progress)
         {
             TestParameters = parameters;
 
-            CudaTestMethod = new Dictionary<CudaTestParallelism, Func<ICudaTestParameters, CudaTestResultCollection>>()
+            CudaTestMethod = new Dictionary<CudaTestParallelism, CudaTestImplementation>()
             {
                 { CudaTestParallelism.DoNotParallelizeTests, RunTestsInSequential },
                 { CudaTestParallelism.DoParallelizeTests, RunTestsInParallel }
             };
+
+            Progression = progress;
         }
 
         protected bool PercentageErrorCheck(double expected_value, double actual_value, double tolerance = 1e-05)
@@ -74,61 +79,78 @@ namespace CslAutomatedTestApi
                 }
             }
         }
-        
+
         protected bool CudaErrorCodeTest(CudaError error)
         {
             return error == CudaError.Success;
         }
-        
+
         protected CudaTestResultCollection RunTestsInParallel(ICudaTestParameters parameters)
         {
-            var testResultsList = new ConcurrentBag<CudaTestRecordCollection>();
-            var totalSessionTime = 0L;
-
-            // The Gpu timer keeps track of each GPU function.
-            // However, in this case, there is an instance of a stopwatch for each thread,
-            // because these tests are running on seperate threads. If you have 4 threads,
-            // the result of totalGpuTime is 4x the actual result. Parallel.For does not say
-            // how many threads it uses, so this is a "hack" to figure that out.
-            var totalTimer = Stopwatch.StartNew();
-
-            Parallel.For(0, parameters.NumOfTests, i =>
+            lock (locker)
             {
-                var timer = Stopwatch.StartNew();
-                testResultsList.Add(TestCsl(parameters));
-                timer.Stop();
-                Interlocked.Add(ref totalSessionTime, timer.ElapsedMilliseconds);
-            });
+                var testResultsList = new ConcurrentBag<CudaTestRecordCollection>();
+                var totalSessionTime = 0L;
+                var progression = 0;
 
-            totalTimer.Stop();
-            var threads = (long)Math.Round((double)totalSessionTime / totalTimer.ElapsedMilliseconds);
+                // The Gpu timer keeps track of each GPU function.
+                // However, in this case, there is an instance of a stopwatch for each thread,
+                // because these tests are running on seperate threads. If you have 4 threads,
+                // the result of totalGpuTime is 4x the actual result. Parallel.For does not say
+                // how many threads it uses, so this is a "hack" to figure that out.
+                var totalTimer = Stopwatch.StartNew();
 
-            return new CudaTestResultCollection(testResultsList.ToList(), parameters)
-            {
-                TotalElapsedMilliseconds = totalSessionTime / threads,
-                GpuElapsedMilliseconds = testResultsList.Sum(x => x.GpuElapsedMilliseconds) / threads
-            };
+                Parallel.For(0, parameters.NumOfTests, i =>
+                {
+                    var timer = Stopwatch.StartNew();
+                    testResultsList.Add(TestCsl(parameters));
+                    timer.Stop();
+                    Interlocked.Add(ref totalSessionTime, timer.ElapsedMilliseconds);
+
+                    if(Progression != null)
+                    {
+                        Interlocked.Increment(ref progression);
+                        Progression.Report((double)progression / parameters.NumOfTests);
+                    }
+                });
+
+                totalTimer.Stop();
+                var threads = (long)Math.Round((double)totalSessionTime / totalTimer.ElapsedMilliseconds);
+
+                return new CudaTestResultCollection(testResultsList.ToList(), parameters)
+                {
+                    TotalElapsedMilliseconds = totalSessionTime / threads,
+                    GpuElapsedMilliseconds = testResultsList.Sum(x => x.GpuElapsedMilliseconds) / threads
+                };
+            }
         }
-        
+
         protected CudaTestResultCollection RunTestsInSequential(ICudaTestParameters parameters)
         {
-            var testResultsList = new List<CudaTestRecordCollection>();
-            var timer = Stopwatch.StartNew();
-
-            for (int i = 0; i < parameters.NumOfTests; i++)
+            lock (locker)
             {
-                testResultsList.Add(TestCsl(parameters));
+                var testResultsList = new List<CudaTestRecordCollection>();
+                var timer = Stopwatch.StartNew();
+
+                for (int i = 0; i < parameters.NumOfTests; i++)
+                {
+                    testResultsList.Add(TestCsl(parameters));
+                    if(Progression != null)
+                    {
+                        Progression.Report((double)i / parameters.NumOfTests);
+                    }
+                }
+
+                timer.Stop();
+
+                return new CudaTestResultCollection(testResultsList, parameters)
+                {
+                    TotalElapsedMilliseconds = timer.ElapsedMilliseconds,
+                    GpuElapsedMilliseconds = testResultsList.Sum(x => x.GpuElapsedMilliseconds)
+                };
             }
-
-            timer.Stop();
-            
-            return new CudaTestResultCollection(testResultsList, parameters)
-            {
-                TotalElapsedMilliseconds = timer.ElapsedMilliseconds,
-                GpuElapsedMilliseconds = testResultsList.Sum(x => x.GpuElapsedMilliseconds)
-            };
         }
-        
+
         protected abstract CudaTestRecordCollection TestCsl(ICudaTestParameters parameters);
     }
 }

@@ -1,5 +1,4 @@
-﻿using CudaSharper;
-using System.Collections;
+﻿using System;
 
 namespace CslAutomatedTestApi
 {
