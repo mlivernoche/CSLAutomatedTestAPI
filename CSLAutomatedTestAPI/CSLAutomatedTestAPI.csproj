@@ -77,7 +77,6 @@
     <Compile Include="ICudaTestParameters.cs" />
     <Compile Include="ICudaTestResult.cs" />
     <Compile Include="IGpuPerformanceMetrics.cs" />
-    <Compile Include="IProgressToCompletion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

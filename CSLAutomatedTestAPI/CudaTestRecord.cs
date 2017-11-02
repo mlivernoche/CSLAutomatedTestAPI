@@ -2,7 +2,7 @@
 
 namespace CslAutomatedTestApi
 {
-    public class CudaTestRecord : IGpuPerformanceMetrics
+    public sealed class CudaTestRecord : IGpuPerformanceMetrics
     {
         public string Name { get; }
         public string Value { get; }

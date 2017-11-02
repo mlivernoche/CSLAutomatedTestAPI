@@ -1,6 +1,8 @@
 ﻿using System;
 using CudaSharper;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace CslAutomatedTestApi
 {
@@ -9,7 +11,7 @@ namespace CslAutomatedTestApi
         CudaTestRecord TestRecord { get; }
     }
 
-    internal struct CudaTestResultCuRand<T> : ICudaTestResult<T[]>
+    internal class CudaTestResultCuRand<T> : ICudaTestResult<T[]>
     {
         public CudaError Error { get; }
         public T[] Result { get; }
@@ -34,13 +36,13 @@ namespace CslAutomatedTestApi
             // Doing it this way, the test takes 9932ms on the same test configuration and system.
             // This is at 1000 samples/sec. Total test diagonstics session was ~10 seconds shorter.
             var duplicates = 0;
-            for (int i = 0; i < result.Result.Length - 1; i++)
+            Parallel.For(0, result.Result.Length - 1, i =>
             {
                 if (result.Result[i].Equals(result.Result[i + 1]))
                 {
-                    duplicates++;
+                    Interlocked.Increment(ref duplicates);
                 }
-            }
+            });
 
             // duplicates will never be higher than result.Result.Length, and duplicates is an increasing variable,
             // so we have to test for it being low.
@@ -54,8 +56,8 @@ namespace CslAutomatedTestApi
                 new GpuPerformanceMetrics(GpuElapsedMilliseconds));
         }
     }
-
-    internal struct CudaTestResultcuStats<T, R> : ICudaTestResult<R>
+    
+    internal class CudaTestResultcuStats<T, R> : ICudaTestResult<R>
     {
         public CudaError Error { get; }
         public R Result { get; }

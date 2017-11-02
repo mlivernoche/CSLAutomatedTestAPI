@@ -1,8 +1,6 @@
-﻿using CudaSharper;
-
-namespace CslAutomatedTestApi
+﻿namespace CslAutomatedTestApi
 {
-    public class CudaTestParameters : ICudaTestParameters
+    public sealed class CudaTestParameters : ICudaTestParameters
     {
         public int NumOfTests { get; set; }
         public int Range { get; set; }

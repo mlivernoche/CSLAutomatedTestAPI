@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace CslAutomatedTestApi
 {
-    public class CudaTestResultCollection : IEnumerable<CudaTestRecordCollection>, IGpuPerformanceMetrics
+    public sealed class CudaTestResultCollection : IEnumerable<CudaTestRecordCollection>, IGpuPerformanceMetrics
     {
         private IList<CudaTestRecordCollection> TestResults { get; }
 

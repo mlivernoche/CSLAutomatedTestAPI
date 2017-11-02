@@ -5,7 +5,7 @@ namespace CslAutomatedTestApi
     /// <summary>
     /// Takes the results of a test and makes the results readable for humans.
     /// </summary>
-    public class CudaTestString
+    public sealed class CudaTestString
     {
         private StringBuilder Output { get; }
 
