@@ -6,27 +6,27 @@ using System.Threading;
 
 namespace CslAutomatedTestApi
 {
-    internal interface ICudaTestResult<T> : ICudaResult<T>, IGpuPerformanceMetrics
+    public interface ICudaTestResult<T> : ICudaResult<T>, IGpuPerformanceMetrics
     {
         CudaTestRecord TestRecord { get; }
     }
 
-    internal class CudaTestResultCuRand<T> : ICudaTestResult<T[]>
+    public class CudaTestResultCuRand<T> : ICudaTestResult<T[]>
     {
         public CudaError Error { get; }
         public T[] Result { get; }
         public CudaTestRecord TestRecord { get; }
         public long GpuElapsedMilliseconds { get; }
 
-        public CudaTestResultCuRand(string name, Func<int, ICudaResult<T[]>> curand, int range)
+        public CudaTestResultCuRand(string name, Func<long, ICudaResult<T[]>> curand, int range)
         {
             var timer = Stopwatch.StartNew();
             var result = curand(range);
             timer.Stop();
             GpuElapsedMilliseconds = timer.ElapsedMilliseconds;
 
-            Error = result.Error;
             Result = result.Result;
+            Error = result.Error;
 
             // This used to be .Distinct.Count() / .Length.
             // The purpose is to see if the RNG produced repeating numbers, mostly due to programmer error.
@@ -57,7 +57,7 @@ namespace CslAutomatedTestApi
         }
     }
     
-    internal class CudaTestResultcuStats<T, R> : ICudaTestResult<R>
+    public class CudaTestResultcuStats<T, R> : ICudaTestResult<R>
     {
         public CudaError Error { get; }
         public R Result { get; }
